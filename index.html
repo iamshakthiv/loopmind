@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>LoopMind</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: #0d0d0f;
+    color: white;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 20px;
+}
+
+.app {
+    width: 100%;
+    max-width: 480px;
+}
+
+.logo {
+    text-align: center;
+    font-size: 32px;
+    font-weight: 800;
+    margin-bottom: 6px;
+}
+
+.tagline {
+    text-align: center;
+    color: #999;
+    margin-bottom: 30px;
+}
+
+.card {
+    background: #18181b;
+    border: 1px solid #29292e;
+    border-radius: 22px;
+    padding: 22px;
+}
+
+label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 10px;
+}
+
+input[type="file"] {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    border: 1px solid #333;
+    background: #101012;
+    color: white;
+}
+
+.presets {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 15px;
+}
+
+button {
+    border: none;
+    border-radius: 12px;
+    padding: 13px 10px;
+    background: #29292e;
+    color: white;
+    font-weight: 700;
+    font-size: 15px;
+}
+
+button:active {
+    transform: scale(.97);
+}
+
+button.selected {
+    background: white;
+    color: black;
+}
+
+.custom {
+    display: flex;
+    gap: 8px;
+}
+
+.custom input {
+    flex: 1;
+    min-width: 0;
+    padding: 13px;
+    border-radius: 12px;
+    border: 1px solid #333;
+    background: #101012;
+    color: white;
+    font-size: 16px;
+}
+
+.timer {
+    text-align: center;
+    font-size: 54px;
+    font-weight: 800;
+    margin: 28px 0 8px;
+    font-variant-numeric: tabular-nums;
+}
+
+.status {
+    text-align: center;
+    color: #999;
+    min-height: 24px;
+    word-break: break-word;
+}
+
+.progress {
+    height: 7px;
+    background: #303035;
+    border-radius: 10px;
+    overflow: hidden;
+    margin: 20px 0;
+}
+
+.progressBar {
+    height: 100%;
+    width: 0%;
+    background: white;
+}
+
+.controls {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 8px;
+}
+
+.play {
+    background: white;
+    color: black;
+}
+
+.info {
+    text-align: center;
+    color: #666;
+    font-size: 12px;
+    margin-top: 20px;
+    line-height: 1.5;
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+    <div class="logo">LoopMind</div>
+
+    <div class="tagline">
+        Repeat what you want your mind to remember.
+    </div>
+
+    <div class="card">
+
+        <label>Choose your audio</label>
+
+        <input
+            id="audioFile"
+            type="file"
+            accept="audio/*"
+        >
+
+        <br><br>
+
+        <label>Session length</label>
+
+        <div class="presets">
+
+            <button data-min="5">5 min</button>
+            <button data-min="10">10 min</button>
+            <button data-min="13">13 min</button>
+
+            <button data-min="15">15 min</button>
+            <button data-min="20">20 min</button>
+            <button data-min="30" class="selected">30 min</button>
+
+            <button data-min="45">45 min</button>
+            <button data-min="60">1 hour</button>
+            <button data-min="90">90 min</button>
+
+        </div>
+
+        <label>Custom minutes</label>
+
+        <div class="custom">
+
+            <input
+                id="customMinutes"
+                type="number"
+                min="0.1"
+                step="0.1"
+                placeholder="Example: 37.5"
+            >
+
+            <button id="customButton">
+                Set
+            </button>
+
+        </div>
+
+        <div class="timer" id="timer">
+            30:00
+        </div>
+
+        <div class="status" id="status">
+            Choose an audio file.
+        </div>
+
+        <div class="progress">
+            <div class="progressBar" id="progressBar"></div>
+        </div>
+
+        <div class="controls">
+
+            <button class="play" id="play">
+                ▶ Play
+            </button>
+
+            <button id="pause">
+                ⏸ Pause
+            </button>
+
+            <button id="stop">
+                ■ Stop
+            </button>
+
+        </div>
+
+        <div class="info">
+            Your audio stays on your device.
+            LoopMind does not upload your audio.
+        </div>
+
+    </div>
+
+</div>
+
+
+<audio id="audio"></audio>
+
+
+<script>
+
+const audio = document.getElementById("audio");
+
+const audioFile =
+    document.getElementById("audioFile");
+
+const timer =
+    document.getElementById("timer");
+
+const status =
+    document.getElementById("status");
+
+const progressBar =
+    document.getElementById("progressBar");
+
+const playButton =
+    document.getElementById("play");
+
+const pauseButton =
+    document.getElementById("pause");
+
+const stopButton =
+    document.getElementById("stop");
+
+const customMinutes =
+    document.getElementById("customMinutes");
+
+const customButton =
+    document.getElementById("customButton");
+
+
+let sessionSeconds = 30 * 60;
+
+let elapsedSeconds = 0;
+
+let playing = false;
+
+let startTime = 0;
+
+let animationFrame;
+
+let audioURL = null;
+
+
+/* -------------------------
+   AUDIO FILE
+------------------------- */
+
+audioFile.addEventListener("change", function() {
+
+    const file = this.files[0];
+
+    if (!file) return;
+
+    if (audioURL) {
+        URL.revokeObjectURL(audioURL);
+    }
+
+    audioURL = URL.createObjectURL(file);
+
+    audio.src = audioURL;
+
+    audio.load();
+
+    elapsedSeconds = 0;
+
+    updateDisplay();
+
+    status.textContent =
+        "Ready: " + file.name;
+
+});
+
+
+/* -------------------------
+   PRESET BUTTONS
+------------------------- */
+
+document.querySelectorAll("[data-min]").forEach(button => {
+
+    button.addEventListener("click", function() {
+
+        document
+            .querySelectorAll("[data-min]")
+            .forEach(b => b.classList.remove("selected"));
+
+        this.classList.add("selected");
+
+        sessionSeconds =
+            Number(this.dataset.min) * 60;
+
+        elapsedSeconds = 0;
+
+        updateDisplay();
+
+        status.textContent =
+            "Session: " + this.dataset.min + " minutes";
+
+    });
+
+});
+
+
+/* -------------------------
+   CUSTOM TIME
+------------------------- */
+
+customButton.addEventListener("click", function() {
+
+    const minutes =
+        parseFloat(customMinutes.value);
+
+    if (!minutes || minutes <= 0) {
+
+        status.textContent =
+            "Enter a valid time.";
+
+        return;
+    }
+
+    sessionSeconds =
+        minutes * 60;
+
+    elapsedSeconds = 0;
+
+    document
+        .querySelectorAll("[data-min]")
+        .forEach(b => b.classList.remove("selected"));
+
+    updateDisplay();
+
+    status.textContent =
+        "Custom session selected.";
+
+});
+
+
+/* -------------------------
+   PLAY
+------------------------- */
+
+playButton.addEventListener("click", async function() {
+
+    if (!audio.src) {
+
+        status.textContent =
+            "Choose your audio first.";
+
+        return;
+    }
+
+    if (!playing) {
+
+        startTime =
+            performance.now() -
+            elapsedSeconds * 1000;
+
+        playing = true;
+
+    }
+
+    try {
+
+        await audio.play();
+
+        status.textContent =
+            "Playing...";
+
+        updateLoop();
+
+    } catch (error) {
+
+        playing = false;
+
+        status.textContent =
+            "Tap Play again to start.";
+
+    }
+
+});
+
+
+/* -------------------------
+   PAUSE
+------------------------- */
+
+pauseButton.addEventListener("click", function() {
+
+    if (!playing) return;
+
+    elapsedSeconds =
+        (performance.now() - startTime) / 1000;
+
+    playing = false;
+
+    audio.pause();
+
+    cancelAnimationFrame(animationFrame);
+
+    status.textContent =
+        "Paused.";
+
+    updateDisplay();
+
+});
+
+
+/* -------------------------
+   STOP
+------------------------- */
+
+stopButton.addEventListener("click", function() {
+
+    playing = false;
+
+    elapsedSeconds = 0;
+
+    audio.pause();
+
+    audio.currentTime = 0;
+
+    cancelAnimationFrame(animationFrame);
+
+    status.textContent =
+        "Stopped.";
+
+    updateDisplay();
+
+});
+
+
+/* -------------------------
+   LOOP AUDIO
+------------------------- */
+
+audio.addEventListener("ended", function() {
+
+    if (playing) {
+
+        audio.currentTime = 0;
+
+        audio.play();
+
+    }
+
+});
+
+
+/* -------------------------
+   TIMER
+------------------------- */
+
+function updateLoop() {
+
+    if (!playing) return;
+
+    elapsedSeconds =
+        (performance.now() - startTime) / 1000;
+
+
+    if (elapsedSeconds >= sessionSeconds) {
+
+        playing = false;
+
+        audio.pause();
+
+        audio.currentTime = 0;
+
+        elapsedSeconds = sessionSeconds;
+
+        status.textContent =
+            "Session complete.";
+
+        updateDisplay();
+
+        return;
+    }
+
+
+    updateDisplay();
+
+    animationFrame =
+        requestAnimationFrame(updateLoop);
+
+}
+
+
+/* -------------------------
+   DISPLAY
+------------------------- */
+
+function updateDisplay() {
+
+    const remaining =
+        Math.max(
+            0,
+            sessionSeconds - elapsedSeconds
+        );
+
+    timer.textContent =
+        formatTime(remaining);
+
+    progressBar.style.width =
+        Math.min(
+            100,
+            (elapsedSeconds / sessionSeconds) * 100
+        ) + "%";
+
+}
+
+
+function formatTime(seconds) {
+
+    seconds = Math.ceil(seconds);
+
+    const minutes =
+        Math.floor(seconds / 60);
+
+    const secs =
+        seconds % 60;
+
+    const hours =
+        Math.floor(minutes / 60);
+
+    const mins =
+        minutes % 60;
+
+
+    if (hours > 0) {
+
+        return (
+            String(hours).padStart(2, "0")
+            + ":" +
+            String(mins).padStart(2, "0")
+            + ":" +
+            String(secs).padStart(2, "0")
+        );
+
+    }
+
+
+    return (
+        String(minutes).padStart(2, "0")
+        + ":" +
+        String(secs).padStart(2, "0")
+    );
+
+}
+
+updateDisplay();
+
+</script>
+
+</body>
+</html>
